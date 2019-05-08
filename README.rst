@@ -23,7 +23,7 @@ You may also use Git to clone the repository and install it manually::
     $ python setup.py install
 
 How to use
------
+------------
 To draw an ellipsoid:
 
 .. code-block:: python
