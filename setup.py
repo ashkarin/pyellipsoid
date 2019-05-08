@@ -24,7 +24,7 @@ setup(
         'Topic :: Software Development :: Libraries :: Python Modules'
     ],
     keywords='ellipsoid drawing rotation analysis',
-    packages=find_packages(exclude=['static']),
+    packages=find_packages(exclude=['tests']),
     install_requires=['numpy'],
     project_urls={  # Optional
         'Bug Reports': 'https://github.com/ashkarin/pyellipsoid/issues',

@@ -22,7 +22,7 @@ You may also use Git to clone the repository and install it manually::
     $ cd pyellipsoid
     $ python setup.py install
 
-Usage
+How to use
 -----
 To draw an ellipsoid:
 
