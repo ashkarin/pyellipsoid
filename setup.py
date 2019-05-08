@@ -15,7 +15,7 @@ setup(
     long_description_content_type='text/x-rst',
     url='https://github.com/ashkarin/pyellipsoid',
     author='Andrei Shkarin',
-    author_email='andrei.shkarin@google.com',
+    author_email='andrei.shkarin@gmail.com',
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
