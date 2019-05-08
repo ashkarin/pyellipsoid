@@ -7,7 +7,7 @@ from pyellipsoid import geometry
 Ellipsoid = namedtuple('Ellipsoid', ['center', 'radii', 'axes'])
 
 
-def ellipsoid_to_json(ellipsoid):
+def ellipsoid_to_dict(ellipsoid):
     """ Convert `ellipsoid` to serializable dictionary.
     Arguments:
         ellipsoid {Ellipsoid} -- ellipsoid instance
@@ -15,28 +15,25 @@ def ellipsoid_to_json(ellipsoid):
     Returns:
         [dict] -- serializable dictionary
     """
-    _json = {}
+    _dict = {}
     if isinstance(ellipsoid, tuple):
         datas = ellipsoid._asdict()
         for data in datas:
             if isinstance(datas[data], np.ndarray):
-                _json[data] = datas[data].tolist()
+                _dict[data] = datas[data].tolist()
             else:
-                _json[data] = (datas[data])
-    return _json
+                _dict[data] = (datas[data])
+    return _dict
 
 
-def ellipsoid_from_json(data):
+def ellipsoid_from_dict(data):
     """ Create Ellipsoid instance from the `data`.
     Arguments:
-        data {str / dict} -- JSON string or dictionary
+        data {dict} -- dictionary
 
     Returns:
         [analysis.Ellipsoid] -- instance of the Ellipsoid
     """
-    if isinstance(data, str):
-        data = json.loads(data)
-
     if not isinstance(data, dict):
         raise ValueError("`data` should be a dictionary")
 
@@ -44,6 +41,16 @@ def ellipsoid_from_json(data):
         raise RuntimeError("`data` should contain {}".format(Ellipsoid._fields))
 
     return Ellipsoid(*[np.array(data[k]) for k in Ellipsoid._fields])
+
+
+def ellipsoid_to_json(ellipsoid):
+    _dict = ellipsoid_to_dict(ellipsoid)
+    return json.dumps(_dict)
+
+
+def ellipsoid_from_json(json_data):
+    _dict = json.loads(json_data)
+    return ellipsoid_from_dict(_dict)
 
 
 def sample_random_points(image, n=2000):
@@ -123,7 +130,8 @@ def analyze_sequence(ellipsoids, validate=True):
             stats['rotation'].append(None)
             continue
 
-        _, angles = geometry.find_relative_axes_rotation(prev_ell.axes, ell.axes)
+        R = geometry.find_relative_axes_rotation(prev_ell.axes, ell.axes)
+        angles = geometry.rotation_matrix_to_angles(R)
 
         # Convert angles to a proper range
         angles = [a if abs(a) < np.pi / 2.0 else a - np.sign(a) * np.pi for a in angles]
