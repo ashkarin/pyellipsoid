@@ -15,15 +15,15 @@ def ellipsoid_to_dict(ellipsoid):
     Returns:
         [dict] -- serializable dictionary
     """
-    _dict = {}
+    D = {}
     if isinstance(ellipsoid, tuple):
         datas = ellipsoid._asdict()
         for data in datas:
             if isinstance(datas[data], np.ndarray):
-                _dict[data] = datas[data].tolist()
+                D[data] = datas[data].tolist()
             else:
-                _dict[data] = (datas[data])
-    return _dict
+                D[data] = (datas[data])
+    return D
 
 
 def ellipsoid_from_dict(data):
@@ -44,13 +44,13 @@ def ellipsoid_from_dict(data):
 
 
 def ellipsoid_to_json(ellipsoid):
-    _dict = ellipsoid_to_dict(ellipsoid)
-    return json.dumps(_dict)
+    D = ellipsoid_to_dict(ellipsoid)
+    return json.dumps(D)
 
 
 def ellipsoid_from_json(json_data):
-    _dict = json.loads(json_data)
-    return ellipsoid_from_dict(_dict)
+    D = json.loads(json_data)
+    return ellipsoid_from_dict(D)
 
 
 def sample_random_points(image, n=2000):
@@ -65,7 +65,6 @@ def sample_random_points(image, n=2000):
     Returns:
         [numpy.array] -- array of points (x, y, z)
     """
-
     if image is None:
         return None
 
@@ -83,6 +82,20 @@ def sample_random_points(image, n=2000):
     return points
 
 
+def sample_all_points(image):
+    """Sample all points from non-zero values in the `image`.
+
+    Arguments:
+        image {numpy.array} -- image (axes order: Z, Y, X)
+    
+    Returns:
+        [numpy.array] -- array of points (x, y, z)
+    """
+    points = np.array(np.nonzero(image)).T
+    points = points[:, ::-1]
+    return points
+
+
 def compute_inertia_ellipsoid(points):
     """Compute inertia ellipsoid for `points`.
 
@@ -94,7 +107,6 @@ def compute_inertia_ellipsoid(points):
     Returns:
         [analysis.Ellipsoid] -- inertia ellipsoid
     """
-
     npoints = points.shape[0]
     center = np.mean(points, axis=0)
     points = points - center
@@ -104,6 +116,29 @@ def compute_inertia_ellipsoid(points):
     radii = 2 * np.sqrt(s * npoints).T
 
     return Ellipsoid(center, radii, V)
+
+
+def map_ellipsoid_to_axes(ellipsoid, axes):
+    """Analyze a sequence of inertial ellipsoids `ellipsoids`.
+
+    Arguments:
+        ellipsoid {Ellipsoid} -- an `Ellipsoid` instance
+        axes {list} -- a list of vectors defining the axes
+
+    Returns:
+        [Ellipsoid] -- an `Ellipsoid` instance
+    """
+    # Find mapping
+    mapping = geometry.find_axes_mapping(ellipsoid.axes, axes)
+
+    # Apply mapping
+    axes = ellipsoid.axes[mapping]
+    radii = ellipsoid.radii[mapping]
+    
+    # Mirror those ellipsoid axes, which are in the opposite direction from the target
+    axes = np.array([sv * np.sign(np.dot(sv, st)) for sv, st in zip(axes, axes)])
+
+    return Ellipsoid(ellipsoid.center, radii, axes)
 
 
 def analyze_sequence(ellipsoids, validate=True):
@@ -118,28 +153,24 @@ def analyze_sequence(ellipsoids, validate=True):
     Returns:
         [dict] -- dictionary of stats
     """
-
     if not all(isinstance(ell, Ellipsoid) for ell in ellipsoids):
         raise ValueError("The entries of `ellipsoids` must be of the `Ellipsoid` type")
 
-    prev_ell = None
+    ndims = len(ellipsoids[0].axes)
+    if not all(len(ell.axes) == ndims for ell in ellipsoids):
+        raise ValueError("The entries of `ellipsoids` must have the same dimensionality")
+
+    # Define the global axes as the source ones
+    source_axes = [np.roll([1, 0, 0], i) for i in range(ndims)]
+
     stats = defaultdict(list)
     for ell in ellipsoids:
-        if prev_ell is None:
-            prev_ell = ell
-            stats['rotation'].append(None)
-            continue
+        ell = map_ellipsoid_to_axes(ell, source_axes)
 
-        R = geometry.find_relative_axes_rotation(prev_ell.axes, ell.axes)
+        R = geometry.find_relative_axes_rotation(source_axes, ell.axes)
         angles = geometry.rotation_matrix_to_angles(R)
-
-        # Convert angles to a proper range
-        angles = [a if abs(a) < np.pi / 2.0 else a - np.sign(a) * np.pi for a in angles]
-
-        # Append
+        #angles = [a if abs(a) < np.pi / 2.0 else a - np.sign(a) * np.pi for a in angles]
         stats['rotation'].append(angles)
-
-        # Update
-        prev_ell = ell
+        source_axes = ell.axes
 
     return stats

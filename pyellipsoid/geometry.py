@@ -2,7 +2,7 @@ import math
 import numpy as np
 
 
-def build_rotation_matrix(ax, ay, az, inverse=False):
+def build_rotation_matrix(ax, ay, az):
     """Build a Euler rotation matrix.
     Rotation order is X, Y, Z (right-hand coordinate system).
     Expected vector is [x, y, z].
@@ -12,16 +12,9 @@ def build_rotation_matrix(ax, ay, az, inverse=False):
         ay {float} -- rotation angle around Y (radians)
         az {float} -- rotation angle around Z (radians)
 
-    Keyword Arguments:
-        inverse {bool} -- Do inverse rotation (default: {False})
-
     Returns:
         [numpy.array] -- rotation matrix
     """
-
-    if inverse:
-        ax, ay, az = -ax, -ay, -az
-
     Rx = np.array([[1, 0, 0],
                    [0, np.cos(ax), -np.sin(ax)],
                    [0, np.sin(ax), np.cos(ax)]])
@@ -139,8 +132,8 @@ def scalar_projection(source, target):
     return np.dot(source, target) / np.linalg.norm(target)
 
 
-def find_vectors_mapping(source, target):
-    """Find indices mapping source vectors to the target one based on the projections
+def find_axes_mapping(source, target):
+    """Find indices mapping source axes to the target axes based on the projections
 
     Arguments:
         source {array} -- source array of vectors
@@ -149,4 +142,15 @@ def find_vectors_mapping(source, target):
     Returns:
         [array] -- indices mapping source vectors to target vectors
     """
-    return [np.argmax([abs(scalar_projection(s, t)) for t in target]) for s in source]
+    mapping = []
+    for s in source:
+        projs = [abs(scalar_projection(s, t)) for t in target]
+        while True:
+            index = np.argmax(projs)
+            if index not in mapping:
+                mapping.append(index)
+                break
+            # set this max to 0 to choose second max
+            projs[index] = 0
+    
+    return mapping
