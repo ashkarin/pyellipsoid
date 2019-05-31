@@ -118,7 +118,7 @@ def compute_inertia_ellipsoid(points):
     return Ellipsoid(center, radii, V)
 
 
-def map_ellipsoid_to_axes(ellipsoid, axes):
+def map_ellipsoid_to_axes(ellipsoid, taret_axes):
     """Analyze a sequence of inertial ellipsoids `ellipsoids`.
 
     Arguments:
@@ -129,14 +129,14 @@ def map_ellipsoid_to_axes(ellipsoid, axes):
         [Ellipsoid] -- an `Ellipsoid` instance
     """
     # Find mapping
-    mapping = geometry.find_axes_mapping(ellipsoid.axes, axes)
+    mapping = geometry.find_axes_mapping(ellipsoid.axes, taret_axes)
 
     # Apply mapping
     axes = ellipsoid.axes[mapping]
     radii = ellipsoid.radii[mapping]
     
     # Mirror those ellipsoid axes, which are in the opposite direction from the target
-    axes = np.array([sv * np.sign(np.dot(sv, st)) for sv, st in zip(axes, axes)])
+    axes = np.array([sv * np.sign(np.dot(sv, st)) for sv, st in zip(axes, taret_axes)])
 
     return Ellipsoid(ellipsoid.center, radii, axes)
 
