@@ -142,15 +142,21 @@ def find_axes_mapping(source, target):
     Returns:
         [array] -- indices mapping source vectors to target vectors
     """
-    mapping = []
+    projections = []
     for s in source:
-        projs = [abs(scalar_projection(s, t)) for t in target]
+        p = [abs(scalar_projection(s, t)) for t in target]
+        projections.append(p)
+
+    projections = np.array(projections)
+    source_to_target_indices = np.argsort(-projections, axis=0)
+
+    mapping = []
+    for indices in source_to_target_indices.T:
         while True:
-            index = np.argmax(projs)
-            if index not in mapping:
-                mapping.append(index)
+            if indices[0] not in mapping:
+                mapping.append(indices[0])
                 break
-            # set this max to 0 to choose second max
-            projs[index] = 0
-    
+            else:
+                indices = np.roll(indices, -1)
+
     return mapping

@@ -166,11 +166,11 @@ def analyze_sequence(ellipsoids, validate=True):
     stats = defaultdict(list)
     for ell in ellipsoids:
         ell = map_ellipsoid_to_axes(ell, source_axes)
-
         R = geometry.find_relative_axes_rotation(source_axes, ell.axes)
         angles = geometry.rotation_matrix_to_angles(R)
-        #angles = [a if abs(a) < np.pi / 2.0 else a - np.sign(a) * np.pi for a in angles]
         stats['rotation'].append(angles)
+        stats['radii'].append(ell.radii)
+        stats['center'].append(ell.center)
         source_axes = ell.axes
 
     return stats

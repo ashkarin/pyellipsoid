@@ -55,7 +55,6 @@ def make_ellipsoid_image(shape, center, radii, angles):
     # dx**2 + dy**2 + dz**2 = r**2
     # dx**2 / r**2 + dy**2 / r**2 + dz**2 / r**2 = 1
     dR = points**2 / radii**2
-    print (ell_region_shape)
     dR = np.sum(dR, axis=1).reshape(ell_region_shape)
     
     ell_region = (dR <= 1).astype(np.uint8)
