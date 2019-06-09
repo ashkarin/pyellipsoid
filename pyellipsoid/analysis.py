@@ -87,7 +87,7 @@ def sample_all_points(image):
 
     Arguments:
         image {numpy.array} -- image (axes order: Z, Y, X)
-    
+
     Returns:
         [numpy.array] -- array of points (x, y, z)
     """
@@ -134,22 +134,19 @@ def map_ellipsoid_to_axes(ellipsoid, taret_axes):
     # Apply mapping
     axes = ellipsoid.axes[mapping]
     radii = ellipsoid.radii[mapping]
-    
+
     # Mirror those ellipsoid axes, which are in the opposite direction from the target
     axes = np.array([sv * np.sign(np.dot(sv, st)) for sv, st in zip(axes, taret_axes)])
 
     return Ellipsoid(ellipsoid.center, radii, axes)
 
 
-def analyze_sequence(ellipsoids, validate=True):
+def analyze_sequence(ellipsoids, inplanes=True):
     """Analyze a sequence of inertial ellipsoids `ellipsoids`.
-
     Arguments:
         ellipsoids {list} -- a list of `Ellipsoid` instances
-
     Keyword Arguments:
-        validate {bool} -- validation (default: {True})
-
+        inplanes {bool} -- rotation of the major axis in the planes (default: {False})
     Returns:
         [dict] -- dictionary of stats
     """
@@ -160,17 +157,46 @@ def analyze_sequence(ellipsoids, validate=True):
     if not all(len(ell.axes) == ndims for ell in ellipsoids):
         raise ValueError("The entries of `ellipsoids` must have the same dimensionality")
 
+    # Coordinate masks for each plane
+    plane_coord_masks = {'xy': [0, 1], 'xz': [0, 2], 'yz': [1, 0]}
+
     # Define the global axes as the source ones
     source_axes = [np.roll([1, 0, 0], i) for i in range(ndims)]
 
+    # Results
     stats = defaultdict(list)
+    if inplanes:
+        stats['plane-rotation'] = defaultdict(list)
+
     for ell in ellipsoids:
+        # Reorder ellipsoid radii and axes according to projections on source_axes
         ell = map_ellipsoid_to_axes(ell, source_axes)
-        R = geometry.find_relative_axes_rotation(source_axes, ell.axes)
-        angles = geometry.rotation_matrix_to_angles(R)
-        stats['rotation'].append(angles)
+
+        # Get major axis of the ellipsoid and the corresponding source_axes vector
+        major_axis_index = np.argmax(ell.radii)
+        ell_major_axis_vector= ell.axes[major_axis_index]
+        source_axis_vector = source_axes[major_axis_index]
+
+        if inplanes:
+            # Compute the rotation of the ellipsoid major axis projection in planes
+            for plane, mask in plane_coord_masks.items():
+                # Take vecotors projection on the plane
+                u = source_axis_vector[mask]
+                v = ell_major_axis_vector[mask]
+                # Compute angle
+                c = np.dot(u,v)/np.linalg.norm(u)/np.linalg.norm(v)
+                angle = np.arccos(np.clip(c, -1, 1))
+                stats['plane-rotation'][plane].append(angle)
+        else:
+            R = geometry.find_relative_axes_rotation(source_axes, ell.axes)
+            angles = geometry.rotation_matrix_to_angles(R)
+            stats['rotation'].append(angles)
+
         stats['radii'].append(ell.radii)
         stats['center'].append(ell.center)
+
+        # Update source axes
         source_axes = ell.axes
 
     return stats
+
