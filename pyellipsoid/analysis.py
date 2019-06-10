@@ -158,7 +158,7 @@ def analyze_sequence(ellipsoids, inplanes=True):
         raise ValueError("The entries of `ellipsoids` must have the same dimensionality")
 
     # Coordinate masks for each plane
-    plane_coord_masks = {'xy': [0, 1], 'xz': [0, 2], 'yz': [1, 0]}
+    plane_coord_masks = {'xy': [0, 1], 'xz': [0, 2], 'yz': [1, 2]}
 
     # Define the global axes as the source ones
     source_axes = [np.roll([1, 0, 0], i) for i in range(ndims)]
