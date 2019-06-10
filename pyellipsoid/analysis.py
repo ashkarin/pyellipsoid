@@ -166,7 +166,7 @@ def analyze_sequence(ellipsoids, inplanes=True):
     # Results
     stats = defaultdict(list)
     if inplanes:
-        stats['plane-rotation'] = defaultdict(list)
+        stats['rotation'] = defaultdict(list)
 
     for ell in ellipsoids:
         # Reorder ellipsoid radii and axes according to projections on source_axes
@@ -186,7 +186,7 @@ def analyze_sequence(ellipsoids, inplanes=True):
                 # Compute angle
                 c = np.dot(u,v)/np.linalg.norm(u)/np.linalg.norm(v)
                 angle = np.arccos(np.clip(c, -1, 1))
-                stats['plane-rotation'][plane].append(angle)
+                stats['rotation'][plane].append(angle)
         else:
             R = geometry.find_relative_axes_rotation(source_axes, ell.axes)
             angles = geometry.rotation_matrix_to_angles(R)
