@@ -214,7 +214,7 @@ def analyze_sequence(ellipsoids, inplane_rotation=True):
 
     for ell in ellipsoids:
         # Map ellipsoid on the source axes
-        ell = analysis.map_ellipsoid_to_axes(ell, source_axes)
+        ell = map_ellipsoid_to_axes(ell, source_axes)
 
         # Find global orientation
         angles = _find_rotation_angles(ell, None, inplane_rotation)
