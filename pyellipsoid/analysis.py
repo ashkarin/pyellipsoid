@@ -141,12 +141,58 @@ def map_ellipsoid_to_axes(ellipsoid, taret_axes):
     return Ellipsoid(ellipsoid.center, radii, axes)
 
 
-def analyze_sequence(ellipsoids, inplanes=True):
+def _find_rotation_angles(ell, source_axes, inplane_rotation=True):
+    # Map ellipsoid to the source axes in order to not loose major axis in case
+    # of shape changes
+    if inplane_rotation:
+        # Coordinate masks for each plane
+        plane_coord_masks = {'xy': [0, 1], 'xz': [0, 2], 'yz': [1, 2]}
+
+        # Major image axes
+        image_axes = {'xy': np.array([1, 0, 0]), 'xz': np.array([0, 0, 1]), 'yz': np.array([0, 1, 0])}
+
+        # Get major axis of the ellipsoid and the corresponding source_axes vector
+        major_axis_index = np.argmax(ell.radii)
+
+        # Get 3D vectors
+        ell_major_axis_vector = ell.axes[major_axis_index]
+
+        # Compute the rotation of the ellipsoid major axis projection in planes
+        angles = dict()
+        for plane, mask in plane_coord_masks.items():
+            if source_axes is None:
+                source_axis_vector = image_axes[plane]
+            else:
+                source_axis_vector = source_axes[major_axis_index]
+            
+            # Take projection of 3D vectors on the plane
+            u = source_axis_vector[mask]
+            v = ell_major_axis_vector[mask]
+
+            # Compute angle between these two vectors
+            c = np.dot(u,v)/np.linalg.norm(u)/np.linalg.norm(v)
+            angle = np.arccos(np.clip(c, -1, 1))
+
+            # Save results
+            angles[plane] = angle
+        
+        return angles
+
+    else:
+        if source_axes is None:
+            source_axes = [np.roll([1, 0, 0], i) for i in range(len(ell.axes))]
+
+        R = geometry.find_relative_axes_rotation(source_axes, ell.axes)
+        angles = geometry.rotation_matrix_to_angles(R)
+        return angles
+
+
+def analyze_sequence(ellipsoids, inplane_rotation=True):
     """Analyze a sequence of inertial ellipsoids `ellipsoids`.
     Arguments:
         ellipsoids {list} -- a list of `Ellipsoid` instances
     Keyword Arguments:
-        inplanes {bool} -- rotation of the major axis in the planes (default: {False})
+        inplane_rotation {bool} -- rotation of the major axis in the planes (default: {False})
     Returns:
         [dict] -- dictionary of stats
     """
@@ -157,41 +203,36 @@ def analyze_sequence(ellipsoids, inplanes=True):
     if not all(len(ell.axes) == ndims for ell in ellipsoids):
         raise ValueError("The entries of `ellipsoids` must have the same dimensionality")
 
-    # Coordinate masks for each plane
-    plane_coord_masks = {'xy': [0, 1], 'xz': [0, 2], 'yz': [1, 2]}
-
-    # Define the global axes as the source ones
+    # Define the source ones
     source_axes = [np.roll([1, 0, 0], i) for i in range(ndims)]
 
     # Results
     stats = defaultdict(list)
-    if inplanes:
+    if inplane_rotation:
         stats['rotation'] = defaultdict(list)
+        stats['orientation'] = defaultdict(list)
 
     for ell in ellipsoids:
-        # Reorder ellipsoid radii and axes according to projections on source_axes
-        ell = map_ellipsoid_to_axes(ell, source_axes)
+        # Map ellipsoid on the source axes
+        ell = analysis.map_ellipsoid_to_axes(ell, source_axes)
 
-        # Get major axis of the ellipsoid and the corresponding source_axes vector
-        major_axis_index = np.argmax(ell.radii)
-        ell_major_axis_vector= ell.axes[major_axis_index]
-        source_axis_vector = source_axes[major_axis_index]
+        # Find global orientation
+        angles = _find_rotation_angles(ell, None, inplane_rotation)
+        if inplane_rotation:
+            for plane, angle in angles.items():
+                stats['orientation'][plane].append(angle)
+        else:
+            stats['orientation'].append(angles)
 
-        if inplanes:
-            # Compute the rotation of the ellipsoid major axis projection in planes
-            for plane, mask in plane_coord_masks.items():
-                # Take vecotors projection on the plane
-                u = source_axis_vector[mask]
-                v = ell_major_axis_vector[mask]
-                # Compute angle
-                c = np.dot(u,v)/np.linalg.norm(u)/np.linalg.norm(v)
-                angle = np.arccos(np.clip(c, -1, 1))
+        # Find relative rotation
+        angles = _find_rotation_angles(ell, source_axes, inplane_rotation)
+        if inplane_rotation:
+            for plane, angle in angles.items():
                 stats['rotation'][plane].append(angle)
         else:
-            R = geometry.find_relative_axes_rotation(source_axes, ell.axes)
-            angles = geometry.rotation_matrix_to_angles(R)
             stats['rotation'].append(angles)
 
+        # Save radii and center of mass
         stats['radii'].append(ell.radii)
         stats['center'].append(ell.center)
 
