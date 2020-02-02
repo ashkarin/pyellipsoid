@@ -25,7 +25,7 @@ def make_ellipsoid_image(shape, center, radii, angle):
         raise ValueError('Center, radii of ellipsoid and image shape have different dimensionality.')
 
     # Do opposite rotation since it is an axes rotation.
-    angle = -1 * angle
+    angle = -1 * np.array(angle)
     R = build_rotation_matrix(*angle)
 
     # Convert to numpy
