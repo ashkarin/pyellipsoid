@@ -36,11 +36,10 @@ def make_ellipsoid_image(shape, center, radii, angle):
 
     # Build a list of points forming the grid
     xi = np.meshgrid(*xi, indexing='ij')
-    points = np.array(list(zip(*np.vstack(map(np.ravel, xi)))))
+    points = np.array(xi).reshape(3, -1)[::-1]
 
     # Reorder coordinates to match XYZ order and rotate
-    points = points[:, ::-1]
-    points = np.dot(R, points.T).T
+    points = np.dot(R, points).T
 
     # Find grid center and rotate
     grid_center = np.array(center) - 0.5*np.array(shape[::-1])
