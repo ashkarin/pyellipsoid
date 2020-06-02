@@ -25,7 +25,7 @@ def make_ellipsoid_image(shape, center, radii, angle):
         raise ValueError('Center, radii of ellipsoid and image shape have different dimensionality.')
 
     # Do opposite rotation since it is an axes rotation.
-    angle = -1 * angle
+    angle = -1 * np.array(angle)
     R = build_rotation_matrix(*angle)
 
     # Convert to numpy
@@ -36,11 +36,10 @@ def make_ellipsoid_image(shape, center, radii, angle):
 
     # Build a list of points forming the grid
     xi = np.meshgrid(*xi, indexing='ij')
-    points = np.array(list(zip(*np.vstack(map(np.ravel, xi)))))
+    points = np.array(xi).reshape(3, -1)[::-1]
 
     # Reorder coordinates to match XYZ order and rotate
-    points = points[:, ::-1]
-    points = np.dot(R, points.T).T
+    points = np.dot(R, points).T
 
     # Find grid center and rotate
     grid_center = np.array(center) - 0.5*np.array(shape[::-1])
